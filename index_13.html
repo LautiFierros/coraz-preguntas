@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CORAZ · Detector de fricción</title>
+<style>
+/* ============================================================================
+   CORAZ · Detector de fricción del catálogo
+   Estructura del archivo:  CONFIG (en <script>) → ESTILOS → ESTADO → LÓGICA → RENDER
+   Paleta ámbar/oscura CORAZ, definida como variables de branding (clonable).
+============================================================================ */
+:root{
+  --brand:#f59e0b;          /* ámbar CORAZ */
+  --brand-2:#fbbf24;
+  --brand-ink:#7c2d12;
+  --bg:#0b0f19;
+  --bg-2:#111827;
+  --card:#161d2e;
+  --card-2:#1c2536;
+  --border:#26314a;
+  --txt:#e5e7eb;
+  --txt-2:#9aa6bd;
+  --txt-3:#6b7691;
+  --ok:#34d399;
+  --warn:#f59e0b;
+  --bad:#f87171;
+  --radius:14px;
+  --shadow:0 8px 30px rgba(0,0,0,.35);
+  --font:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  /* colores por intención */
+  --i-compat:#f59e0b; --i-stock:#38bdf8; --i-envio:#a78bfa; --i-precio:#34d399;
+  --i-specs:#fb7185; --i-garantia:#f472b6; --i-otras:#94a3b8; --i-saludo:#475569;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:linear-gradient(180deg,#0b0f19,#0d1322 60%);color:var(--txt);font-family:var(--font);min-height:100vh;font-size:15px;line-height:1.5}
+a{color:var(--brand-2)}
+button{font-family:inherit;cursor:pointer}
+.hidden{display:none !important}
+
+/* ---- Layout ---- */
+.wrap{max-width:1080px;margin:0 auto;padding:16px}
+header.top{display:flex;align-items:center;gap:12px;padding:14px 16px;position:sticky;top:0;z-index:20;
+  background:rgba(11,15,25,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px}
+.logo .mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+  display:grid;place-items:center;color:#1a1205;font-weight:900;box-shadow:0 4px 12px rgba(245,158,11,.35)}
+.logo small{display:block;color:var(--txt-3);font-weight:600;font-size:11px;letter-spacing:.6px;text-transform:uppercase}
+header.top .sp{flex:1}
+.btn{border:1px solid var(--border);background:var(--card-2);color:var(--txt);padding:9px 14px;border-radius:10px;font-weight:600;
+  display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.btn:hover{border-color:var(--brand);color:#fff}
+.btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand-2));border:none;color:#1a1205;font-weight:800}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:6px 10px;font-size:13px}
+
+/* ---- Login ---- */
+.login{min-height:100vh;display:grid;place-items:center;padding:20px}
+.login .box{width:100%;max-width:380px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow)}
+.login h1{margin:6px 0 2px;font-size:20px}
+.login p{margin:0 0 20px;color:var(--txt-2);font-size:13px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--txt-2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.field input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-2);color:var(--txt);font-size:15px}
+.field input:focus{outline:none;border-color:var(--brand)}
+.msg{font-size:13px;padding:10px 12px;border-radius:10px;margin-top:6px}
+.msg.err{background:rgba(248,113,113,.12);color:#fca5a5;border:1px solid rgba(248,113,113,.3)}
+.msg.info{background:rgba(56,189,248,.10);color:#7dd3fc;border:1px solid rgba(56,189,248,.25)}
+
+/* ---- KPIs ---- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;position:relative}
+.kpi .v{font-size:26px;font-weight:800;line-height:1.1}
+.kpi .l{color:var(--txt-2);font-size:12.5px;margin-top:3px}
+.kpi .help{position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;border:1px solid var(--border);
+  color:var(--txt-3);font-size:11px;display:grid;place-items:center;cursor:pointer;user-select:none}
+.kpi .help:hover{border-color:var(--brand);color:var(--brand)}
+.kpi.accent .v{color:var(--brand-2)}
+.kpi.good .v{color:var(--ok)} .kpi.warn .v{color:var(--warn)}
+
+/* ---- Tabs ---- */
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin:6px 0 16px;overflow-x:auto}
+.tab{padding:10px 14px;color:var(--txt-2);font-weight:600;border-bottom:2px solid transparent;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none}
+.tab.active{color:#fff;border-bottom-color:var(--brand)}
+
+/* ---- Cards / listas ---- */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 4px;font-size:16px}
+.card .sub{color:var(--txt-2);font-size:13px;margin:0 0 14px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar input[type=search]{flex:1;min-width:160px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-2);color:var(--txt)}
+.toolbar input:focus{outline:none;border-color:var(--brand)}
+
+/* fila de ranking */
+.pub{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 6px;border-bottom:1px solid var(--border)}
+.pub:last-child{border-bottom:none}
+.pub .t{font-weight:600;font-size:14px}
+.pub .t small{display:block;color:var(--txt-3);font-weight:500;font-size:12px;margin-top:2px}
+.pub .metrics{display:flex;gap:8px;align-items:center}
+.chip{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--card-2);border:1px solid var(--border);color:var(--txt-2);white-space:nowrap}
+.chip.big{font-size:14px;padding:5px 12px;color:var(--brand-2);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+.chip.bad{color:#fca5a5;border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.08)}
+.bar{height:7px;border-radius:6px;background:var(--card-2);overflow:hidden;margin-top:8px}
+.bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+.mini-int{font-size:11.5px;color:var(--txt-3);margin-top:6px}
+.tag-int{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;color:#0b0f19}
+
+/* barras de distribución */
+.dist{display:flex;flex-direction:column;gap:10px}
+.dist .row{display:grid;grid-template-columns:130px 1fr 46px;gap:10px;align-items:center;font-size:13px}
+.dist .row .lbl{color:var(--txt-2)}
+.dist .row .track{height:12px;border-radius:6px;background:var(--card-2);overflow:hidden}
+.dist .row .track > i{display:block;height:100%}
+.dist .row .n{text-align:right;font-weight:700}
+
+/* modal detalle */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:50;padding:16px}
+.modal{width:100%;max-width:720px;max-height:88vh;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.modal .mh{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--border);padding:16px;display:flex;gap:10px;align-items:flex-start}
+.modal .mh .x{margin-left:auto;font-size:22px;line-height:1;color:var(--txt-3);background:none;border:none}
+.modal .mb{padding:16px}
+.q{padding:11px 0;border-bottom:1px dashed var(--border)}
+.q:last-child{border-bottom:none}
+.q .qt{font-weight:600}
+.q .qa{color:var(--txt-2);font-size:13.5px;margin-top:4px;padding-left:12px;border-left:2px solid var(--border)}
+.q .meta{font-size:11.5px;color:var(--txt-3);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap}
+
+/* estados */
+.state{text-align:center;padding:40px 16px;color:var(--txt-2)}
+.spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--brand);margin:0 auto 14px;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{border:1px dashed var(--border);border-radius:var(--radius);padding:30px;text-align:center;color:var(--txt-2)}
+
+/* overlay de sync con feedback de progreso */
+.syncbox{position:fixed;inset:0;background:rgba(11,15,25,.8);display:grid;place-items:center;z-index:60;padding:16px}
+.syncbox .inner{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:26px 28px;max-width:360px;width:100%;text-align:center;box-shadow:var(--shadow)}
+.syncbox .inner .big{font-size:15px;font-weight:700;margin:4px 0 6px}
+.syncbox .inner .small{color:var(--txt-2);font-size:13px}
+.syncbox .inner .timer{font-variant-numeric:tabular-nums;color:var(--brand-2);font-weight:800;font-size:22px;margin-top:10px}
+.progtrack{height:8px;border-radius:6px;background:var(--card-2);overflow:hidden;margin:14px 0 6px}
+.progtrack > i{display:block;height:100%;width:30%;background:linear-gradient(90deg,var(--brand),var(--brand-2));animation:indet 1.3s ease-in-out infinite}
+@keyframes indet{0%{margin-left:-30%}100%{margin-left:100%}}
+
+/* popover ayuda */
+#pop{position:fixed;z-index:80;max-width:280px;background:#0f1626;border:1px solid var(--brand);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--txt);box-shadow:var(--shadow)}
+#pop b{color:var(--brand-2)}
+
+/* funcionamiento */
+.func h3{color:var(--brand-2);margin:18px 0 6px;font-size:14px}
+.func p,.func li{color:var(--txt-2);font-size:13.5px}
+.func ul{margin:6px 0;padding-left:20px}
+.footer{color:var(--txt-3);font-size:12px;text-align:center;padding:24px 0}
+@media(max-width:560px){
+  .kpi .v{font-size:22px}
+  .dist .row{grid-template-columns:96px 1fr 40px}
+  .pub{grid-template-columns:1fr}
+  .pub .metrics{justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginView" class="login">
+  <div class="box">
+    <div class="logo"><span class="mark">C</span><div>CORAZ Autopartes<small>Detector de fricción</small></div></div>
+    <h1>Ingresá</h1>
+    <p>Preguntas y mensajes de Mercado Libre — análisis del catálogo.</p>
+    <form id="loginForm">
+      <div class="field"><label>Email</label><input type="email" id="email" autocomplete="username" required /></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="password" autocomplete="current-password" required /></div>
+      <button class="btn primary" style="width:100%" type="submit" id="loginBtn">Entrar</button>
+      <div id="loginMsg"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="appView" class="hidden">
+  <header class="top">
+    <div class="logo"><span class="mark">C</span><div>CORAZ<small>Detector de fricción</small></div></div>
+    <div class="sp"></div>
+    <button class="btn sm" id="syncBtn" title="Traer las preguntas nuevas de Mercado Libre">↻ Sincronizar</button>
+    <button class="btn sm ghost" id="logoutBtn">Salir</button>
+  </header>
+
+  <div class="wrap">
+    <!-- KPIs -->
+    <div class="kpis" id="kpis"></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="ranking">🔥 Ranking de fricción</button>
+      <button class="tab" data-tab="intenciones">📊 Tipos de pregunta</button>
+      <button class="tab" data-tab="func">ℹ️ Funcionamiento de la app</button>
+    </div>
+
+    <!-- TAB ranking -->
+    <section id="tab-ranking">
+      <div class="card">
+        <h2>Publicaciones que más preguntas generan</h2>
+        <p class="sub">Ordenadas por preguntas <b>accionables</b> (se descuentan los saludos/agradecimientos). Más preguntas = más información que probablemente le falta a la ficha. Tocá una fila para ver el detalle.</p>
+        <div class="toolbar">
+          <input type="search" id="buscar" placeholder="Buscar publicación o SKU…" />
+        </div>
+        <div id="rankingList"><div class="state"><div class="spin"></div>Cargando…</div></div>
+      </div>
+    </section>
+
+    <!-- TAB intenciones -->
+    <section id="tab-intenciones" class="hidden">
+      <div class="card">
+        <h2>¿De qué preguntan?</h2>
+        <p class="sub">Clasificación automática por tipo. <b>Ojo:</b> hoy es una aproximación por palabras clave; cuando enchufemos la IA la categorización va a ser exacta.</p>
+        <div class="dist" id="distList"></div>
+      </div>
+    </section>
+
+    <!-- TAB funcionamiento -->
+    <section id="tab-func" class="hidden">
+      <div class="card func">
+        <h2>Funcionamiento de la app</h2>
+        <p class="sub">Qué hace, de dónde saca los datos y cómo usarla.</p>
+
+        <h3>¿Para qué sirve?</h3>
+        <p>Detecta la <b>fricción del catálogo</b>: qué publicaciones generan más preguntas y de qué tipo. Cada pregunta repetida es información que le falta a la ficha. Si una bomba universal recibe 40 preguntas de "¿le va a mi auto?", agregar una tabla de compatibilidad a esa publicación mata esas 40 preguntas → menos trabajo y más ventas.</p>
+
+        <h3>¿De dónde salen los datos?</h3>
+        <ul>
+          <li>Las preguntas se bajan de la <b>API de Mercado Libre</b> (cuenta CORAZ) y se guardan en Supabase (tabla <code>ml_preguntas</code>).</li>
+          <li>El título y SKU de cada publicación se cruzan con tu tabla <code>ml_sku_publicaciones</code>.</li>
+          <li>Todo pasa por Edge Functions seguras (<code>preguntas-sync</code> y <code>preguntas-list</code>): la app nunca ve tokens de ML.</li>
+        </ul>
+
+        <h3>Las pestañas</h3>
+        <ul>
+          <li><b>Ranking de fricción:</b> publicaciones ordenadas por preguntas accionables. Cada fila muestra el total, cuántas quedaron sin responder y el tipo de pregunta dominante. Tocala para ver todas las preguntas de esa publicación agrupadas por tipo.</li>
+          <li><b>Tipos de pregunta:</b> distribución global (compatibilidad, stock, envío, precio, medidas, garantía, y el ruido de saludos/agradecimientos).</li>
+        </ul>
+
+        <h3>El botón "Sincronizar"</h3>
+        <p>Trae las preguntas <b>nuevas</b> de los últimos días desde Mercado Libre. La carga completa del histórico ya se hizo una vez. Podés sincronizar cuando quieras ver lo último.</p>
+
+        <h3>¿Qué viene después?</h3>
+        <p>Esta app deja la base lista para el <b>auto-respondedor con IA</b>: la misma tabla de preguntas puede alimentar a Claude para redactar respuestas y sugerir qué agregar a cada ficha. Por eso ya guardamos cada pregunta con su respuesta y su clasificación.</p>
+      </div>
+    </section>
+
+    <div class="footer">CORAZ Autopartes · Detector de fricción del catálogo · datos de Mercado Libre</div>
+  </div>
+</div>
+
+<!-- modal detalle publicación -->
+<div id="detalle" class="overlay hidden"></div>
+<!-- popover ayuda KPI -->
+<div id="pop" class="hidden"></div>
+
+<!-- supabase-js -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+/* ============================ CONFIG ============================ */
+const CONFIG = {
+  SUPABASE_URL: "https://kvewsxrfogosjwehookj.supabase.co",
+  // anon key: pública por diseño; el acceso real lo controla RLS + Edge Functions.
+  ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2ZXdzeHJmb2dvc2p3ZWhvb2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3OTA2OTksImV4cCI6MjEwMTM2NjY5OX0.6oyDPFG_8hAAULXCUn6uO7C-abxMSOxxMFFJ_xBFZHY",
+  FN_LIST: "/functions/v1/preguntas-list",
+  FN_SYNC: "/functions/v1/preguntas-sync",
+};
+// Colores por intención (deben coincidir con las categorías de preguntas-list)
+const INT_COLORS = { compatibilidad:"#f59e0b", stock:"#38bdf8", envio:"#a78bfa", precio:"#34d399", specs:"#fb7185", garantia:"#f472b6", otras:"#94a3b8", saludo:"#475569" };
+// Textos de ayuda de cada KPI (premisa: todo número lleva su "?")
+const KPI_HELP = {
+  total:{t:"Preguntas totales",d:"Todas las preguntas recibidas en el período, incluyendo saludos y agradecimientos. Fuente: API de Mercado Libre."},
+  accionables:{t:"Preguntas accionables",d:"Total menos los saludos/agradecimientos. Son las preguntas reales que valdría la pena evitar mejorando las fichas."},
+  saludos:{t:"Ruido (saludos)",d:"Mensajes tipo \"gracias\", \"ok\", \"perfecto\". No son fricción; se separan para no ensuciar el análisis."},
+  publicaciones:{t:"Publicaciones con preguntas",d:"Cuántas publicaciones distintas recibieron al menos una pregunta."},
+  sin_responder:{t:"Sin responder",d:"Preguntas con estado UNANSWERED en Mercado Libre al momento de la última sincronización."},
+  horas:{t:"Tiempo prom. de respuesta",d:"Promedio de horas entre que entra la pregunta y la respondés. Se calcula sobre las preguntas ya respondidas."},
+};
+
+/* ============================ ESTADO ============================ */
+let sb = null;
+let SESSION = null;
+let DATA = { resumen:null, intenciones:[], ranking:[] };
+let filtro = "";
+
+/* ============================ LÓGICA ============================ */
+const $ = (s,root=document)=>root.querySelector(s);
+const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
+const esc = (s)=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtFecha = (iso)=>{ if(!iso) return "—"; try{ return new Date(iso).toLocaleDateString("es-AR",{day:"2-digit",month:"short",year:"2-digit"});}catch{return "—";} };
+
+// Guard de CDN (premisa robustez)
+function cdnOk(){ return typeof window.supabase !== "undefined" && window.supabase.createClient; }
+
+async function apiGet(path){
+  const ctrl = new AbortController();
+  const to = setTimeout(()=>ctrl.abort(), 20000);
+  try{
+    const res = await fetch(CONFIG.SUPABASE_URL+path, {
+      headers:{ "apikey":CONFIG.ANON_KEY, "Authorization":"Bearer "+SESSION.access_token },
+      signal: ctrl.signal,
+    });
+    const json = await res.json().catch(()=>null);
+    if(!res.ok || !json || json.ok===false){
+      throw new Error((json && json.error) ? json.error : ("HTTP "+res.status));
+    }
+    return json;
+  } finally { clearTimeout(to); }
+}
+async function apiPostSync(body){
+  const ctrl = new AbortController();
+  const to = setTimeout(()=>ctrl.abort(), 90000);
+  try{
+    const res = await fetch(CONFIG.SUPABASE_URL+CONFIG.FN_SYNC, {
+      method:"POST",
+      headers:{ "apikey":CONFIG.ANON_KEY, "Authorization":"Bearer "+SESSION.access_token, "Content-Type":"application/json" },
+      body: JSON.stringify(body||{}),
+      signal: ctrl.signal,
+    });
+    const json = await res.json().catch(()=>null);
+    if(!res.ok || !json || json.ok===false) throw new Error((json && json.error) ? json.error : ("HTTP "+res.status));
+    return json;
+  } finally { clearTimeout(to); }
+}
+
+/* ---- Auth ---- */
+async function initAuth(){
+  if(!cdnOk()){
+    $("#loginMsg").innerHTML = '<div class="msg err">No se pudo cargar la librería de Supabase (CDN). Revisá tu conexión y recargá.</div>';
+    return;
+  }
+  sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.ANON_KEY);
+  const { data } = await sb.auth.getSession();
+  if(data && data.session){ SESSION = data.session; enterApp(); }
+}
+async function doLogin(e){
+  e.preventDefault();
+  const btn = $("#loginBtn"); const msg = $("#loginMsg");
+  msg.innerHTML=""; btn.disabled=true; btn.textContent="Entrando…";
+  try{
+    const { data, error } = await sb.auth.signInWithPassword({ email:$("#email").value.trim(), password:$("#password").value });
+    if(error) throw error;
+    SESSION = data.session;
+    enterApp();
+  }catch(err){
+    msg.innerHTML = '<div class="msg err">'+esc(err.message||"No se pudo iniciar sesión")+'</div>';
+  }finally{ btn.disabled=false; btn.textContent="Entrar"; }
+}
+async function doLogout(){ try{ await sb.auth.signOut(); }catch{} location.reload(); }
+
+function enterApp(){
+  $("#loginView").classList.add("hidden");
+  $("#appView").classList.remove("hidden");
+  cargar();
+}
+
+/* ---- Carga de datos ---- */
+async function cargar(){
+  $("#rankingList").innerHTML = '<div class="state"><div class="spin"></div>Cargando preguntas…</div>';
+  try{
+    const json = await apiGet(CONFIG.FN_LIST);
+    DATA.resumen = json.resumen; DATA.intenciones = json.intenciones||[]; DATA.ranking = json.ranking||[];
+    renderKpis(); renderRanking(); renderIntenciones();
+  }catch(err){
+    $("#rankingList").innerHTML = '<div class="empty">No se pudieron cargar los datos.<br><small>'+esc(err.message)+'</small><br><br><button class="btn sm" onclick="cargar()">Reintentar</button></div>';
+    renderKpis(true);
+  }
+}
+
+/* ---- Sincronizar con feedback de progreso (premisa 9) ---- */
+async function sincronizar(){
+  const box = document.createElement("div");
+  box.className="syncbox";
+  box.innerHTML = '<div class="inner"><div class="spin"></div><div class="big">Sincronizando con Mercado Libre</div>'
+    +'<div class="small">Trayendo las preguntas nuevas…</div>'
+    +'<div class="progtrack"><i></i></div><div class="timer" id="syncTimer">0.0s</div>'
+    +'<div class="small" id="syncEta" style="margin-top:6px">Suele tardar unos segundos</div></div>';
+  document.body.appendChild(box);
+  const t0 = Date.now();
+  const iv = setInterval(()=>{ const s=((Date.now()-t0)/1000).toFixed(1); const el=$("#syncTimer"); if(el) el.textContent=s+"s"; }, 100);
+  try{
+    const r = await apiPostSync({ modo:"incremental", max_paginas:6 });
+    clearInterval(iv);
+    const secs = ((Date.now()-t0)/1000).toFixed(1);
+    box.querySelector(".inner").innerHTML = '<div style="font-size:32px">✅</div>'
+      +'<div class="big">Listo</div><div class="small">'+ (r.preguntas_procesadas??0) +' preguntas revisadas en '+secs+'s.</div>'
+      +'<button class="btn primary sm" style="margin-top:14px" id="syncClose">Ver resultados</button>';
+    $("#syncClose").onclick = ()=>{ box.remove(); cargar(); };
+  }catch(err){
+    clearInterval(iv);
+    box.querySelector(".inner").innerHTML = '<div style="font-size:30px">⚠️</div><div class="big">No se pudo sincronizar</div>'
+      +'<div class="small">'+esc(err.message)+'</div><button class="btn sm" style="margin-top:14px" id="syncClose">Cerrar</button>';
+    $("#syncClose").onclick = ()=> box.remove();
+  }
+}
+
+/* ============================ RENDER ============================ */
+function kpiCard(key,val,cls){
+  const h = KPI_HELP[key];
+  return '<div class="kpi '+(cls||"")+'"><span class="help" data-help="'+key+'">?</span>'
+    +'<div class="v">'+val+'</div><div class="l">'+(h?h.t:key)+'</div></div>';
+}
+function renderKpis(err){
+  const r = DATA.resumen;
+  if(err || !r){ $("#kpis").innerHTML = kpiCard("total","—")+kpiCard("accionables","—")+kpiCard("publicaciones","—"); return; }
+  const horas = r.horas_prom_respuesta!=null ? r.horas_prom_respuesta+"h" : "—";
+  $("#kpis").innerHTML =
+    kpiCard("accionables", r.accionables, "accent")+
+    kpiCard("total", r.total)+
+    kpiCard("publicaciones", r.publicaciones)+
+    kpiCard("sin_responder", r.sin_responder, r.sin_responder>0?"warn":"good")+
+    kpiCard("horas", horas)+
+    kpiCard("saludos", r.saludos);
+}
+
+function tagIntencion(key,label){
+  const c = INT_COLORS[key]||"#94a3b8";
+  return '<span class="tag-int" style="background:'+c+'">'+esc(label||key)+'</span>';
+}
+function renderRanking(){
+  const cont = $("#rankingList");
+  let list = DATA.ranking.slice();
+  if(filtro){
+    const f = filtro.toLowerCase();
+    list = list.filter(p => (p.titulo||"").toLowerCase().includes(f) || (p.seller_sku||"").toLowerCase().includes(f) || (p.item_id||"").toLowerCase().includes(f));
+  }
+  if(!list.length){ cont.innerHTML='<div class="empty">Sin resultados.</div>'; return; }
+  const max = Math.max(...list.map(p=>p.accionables||0), 1);
+  cont.innerHTML = list.map(p=>{
+    const pct = Math.round((p.accionables/max)*100);
+    const titulo = p.titulo || ("Publicación "+p.item_id);
+    const sku = p.seller_sku ? '<small>SKU '+esc(p.seller_sku)+' · '+esc(p.item_id)+'</small>' : '<small>'+esc(p.item_id)+'</small>';
+    const intTag = p.intencion_top ? tagIntencion(p.intencion_top, p.intencion_top_label)+' <span style="color:var(--txt-3)">'+p.pct_top+'%</span>' : '';
+    const sinResp = p.sin_resp>0 ? '<span class="chip bad">'+p.sin_resp+' sin resp.</span>' : '';
+    return '<div class="pub" onclick="verDetalle(\''+p.item_id+'\')" style="cursor:pointer">'
+      +'<div><div class="t">'+esc(titulo)+sku+'</div>'
+      +'<div class="bar"><i style="width:'+pct+'%"></i></div>'
+      +'<div class="mini-int">'+intTag+'</div></div>'
+      +'<div class="metrics"><span class="chip big">'+p.accionables+'</span>'+sinResp+'</div></div>';
+  }).join("");
+}
+function renderIntenciones(){
+  const cont = $("#distList");
+  const list = DATA.intenciones.slice();
+  if(!list.length){ cont.innerHTML='<div class="empty">Sin datos.</div>'; return; }
+  const total = list.reduce((a,b)=>a+b.cantidad,0)||1;
+  cont.innerHTML = list.map(i=>{
+    const pct = Math.round((i.cantidad/total)*100);
+    const c = INT_COLORS[i.key]||"#94a3b8";
+    return '<div class="row"><div class="lbl">'+esc(i.label)+'</div>'
+      +'<div class="track"><i style="width:'+pct+'%;background:'+c+'"></i></div>'
+      +'<div class="n">'+i.cantidad+'</div></div>';
+  }).join("");
+}
+
+/* ---- Detalle de publicación (modal) ---- */
+async function verDetalle(itemId){
+  const ov = $("#detalle");
+  ov.classList.remove("hidden");
+  ov.innerHTML = '<div class="modal"><div class="mb"><div class="state"><div class="spin"></div>Cargando preguntas…</div></div></div>';
+  try{
+    const json = await apiGet(CONFIG.FN_LIST + "?item_id="+encodeURIComponent(itemId));
+    const titulo = json.titulo || ("Publicación "+itemId);
+    const linkML = "https://articulo.mercadolibre.com.ar/"+itemId.replace(/^MLA/,"MLA-");
+    const porInt = (json.por_intencion||[]).map(i=>{
+      const c = INT_COLORS[i.key]||"#94a3b8";
+      return '<span class="chip" style="border-color:'+c+';color:'+c+'">'+esc(i.label)+': '+i.cantidad+'</span>';
+    }).join(" ");
+    const preguntas = (json.preguntas||[]).map(q=>{
+      const resp = q.respuesta ? '<div class="qa">'+esc(q.respuesta)+'</div>' : '<div class="qa" style="color:var(--bad)">Sin responder</div>';
+      return '<div class="q"><div class="qt">'+tagIntencion(q.intencion,q.intencion_label)+' '+esc(q.texto)+'</div>'+resp
+        +'<div class="meta"><span>'+fmtFecha(q.date_created)+'</span><span>'+esc(q.status)+'</span></div></div>';
+    }).join("");
+    ov.innerHTML = '<div class="modal"><div class="mh"><div><div style="font-weight:700">'+esc(titulo)+'</div>'
+      +'<div style="color:var(--txt-3);font-size:12px;margin-top:3px">'+ (json.seller_sku?("SKU "+esc(json.seller_sku)+" · "):"") + esc(itemId)+' · '+json.total+' preguntas · <a href="'+linkML+'" target="_blank" rel="noopener">ver en ML ↗</a></div>'
+      +'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+porInt+'</div></div>'
+      +'<button class="x" onclick="cerrarDetalle()">×</button></div>'
+      +'<div class="mb">'+(preguntas||'<div class="empty">Sin preguntas.</div>')+'</div></div>';
+  }catch(err){
+    ov.innerHTML = '<div class="modal"><div class="mh"><div style="font-weight:700">Error</div><button class="x" onclick="cerrarDetalle()">×</button></div>'
+      +'<div class="mb"><div class="empty">'+esc(err.message)+'</div></div></div>';
+  }
+}
+function cerrarDetalle(){ $("#detalle").classList.add("hidden"); $("#detalle").innerHTML=""; }
+
+/* ---- Popover ayuda KPI ---- */
+function showPop(target,key){
+  const h = KPI_HELP[key]; if(!h) return;
+  const pop = $("#pop");
+  pop.innerHTML = '<b>'+esc(h.t)+'</b><br>'+esc(h.d);
+  pop.classList.remove("hidden");
+  const r = target.getBoundingClientRect();
+  let top = r.bottom+8, left = Math.min(r.left, window.innerWidth-300);
+  pop.style.top = top+"px"; pop.style.left = Math.max(8,left)+"px";
+}
+function hidePop(){ $("#pop").classList.add("hidden"); }
+
+/* ============================ EVENTOS ============================ */
+$("#loginForm").addEventListener("submit", doLogin);
+$("#logoutBtn").addEventListener("click", doLogout);
+$("#syncBtn").addEventListener("click", sincronizar);
+$("#buscar").addEventListener("input", (e)=>{ filtro=e.target.value; renderRanking(); });
+$$(".tab").forEach(t=>t.addEventListener("click",()=>{
+  $$(".tab").forEach(x=>x.classList.remove("active")); t.classList.add("active");
+  const tab=t.dataset.tab;
+  $("#tab-ranking").classList.toggle("hidden",tab!=="ranking");
+  $("#tab-intenciones").classList.toggle("hidden",tab!=="intenciones");
+  $("#tab-func").classList.toggle("hidden",tab!=="func");
+}));
+document.addEventListener("click",(e)=>{
+  const help = e.target.closest(".help");
+  if(help){ showPop(help, help.dataset.help); e.stopPropagation(); return; }
+  if(!e.target.closest("#pop")) hidePop();
+  if(e.target.id==="detalle") cerrarDetalle();
+});
+document.addEventListener("keydown",(e)=>{ if(e.key==="Escape"){ cerrarDetalle(); hidePop(); }});
+
+/* ============================ INIT ============================ */
+initAuth();
+</script>
+</body>
+</html>

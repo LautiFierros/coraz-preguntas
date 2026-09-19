@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CORAZ · Preguntas ML</title>
+<style>
+/* ============================================================================
+   CORAZ · Gestor de preguntas de Mercado Libre
+   Detector de fricción + responder + plantillas.
+   Estructura:  CONFIG (en <script>) → ESTILOS → ESTADO → LÓGICA → RENDER
+   Paleta ámbar/oscura CORAZ (variables de branding → clonable).
+============================================================================ */
+:root{
+  --brand:#f59e0b; --brand-2:#fbbf24; --brand-ink:#7c2d12;
+  --bg:#0b0f19; --bg-2:#111827; --card:#161d2e; --card-2:#1c2536; --border:#26314a;
+  --txt:#e5e7eb; --txt-2:#9aa6bd; --txt-3:#6b7691;
+  --ok:#34d399; --warn:#f59e0b; --bad:#f87171;
+  --radius:14px; --shadow:0 8px 30px rgba(0,0,0,.35);
+  --font:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  --i-compat:#f59e0b; --i-stock:#38bdf8; --i-envio:#a78bfa; --i-precio:#34d399;
+  --i-specs:#fb7185; --i-garantia:#f472b6; --i-otras:#94a3b8; --i-saludo:#475569;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:linear-gradient(180deg,#0b0f19,#0d1322 60%);color:var(--txt);font-family:var(--font);min-height:100vh;font-size:15px;line-height:1.5}
+a{color:var(--brand-2)}
+button{font-family:inherit;cursor:pointer}
+textarea{font-family:inherit}
+.hidden{display:none !important}
+.wrap{max-width:1080px;margin:0 auto;padding:16px}
+header.top{display:flex;align-items:center;gap:12px;padding:14px 16px;position:sticky;top:0;z-index:20;
+  background:rgba(11,15,25,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px}
+.logo .mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+  display:grid;place-items:center;color:#1a1205;font-weight:900;box-shadow:0 4px 12px rgba(245,158,11,.35)}
+.logo small{display:block;color:var(--txt-3);font-weight:600;font-size:11px;letter-spacing:.6px;text-transform:uppercase}
+header.top .sp{flex:1}
+.btn{border:1px solid var(--border);background:var(--card-2);color:var(--txt);padding:9px 14px;border-radius:10px;font-weight:600;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.btn:hover{border-color:var(--brand);color:#fff}
+.btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand-2));border:none;color:#1a1205;font-weight:800}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:6px 10px;font-size:13px}
+.btn.danger{border-color:rgba(248,113,113,.35);color:#fca5a5}
+.btn.danger:hover{background:rgba(248,113,113,.12);color:#fecaca}
+
+/* login */
+.login{min-height:100vh;display:grid;place-items:center;padding:20px}
+.login .box{width:100%;max-width:380px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow)}
+.login h1{margin:6px 0 2px;font-size:20px}
+.login p{margin:0 0 20px;color:var(--txt-2);font-size:13px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--txt-2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.field input,.field textarea{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-2);color:var(--txt);font-size:15px}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--brand)}
+.msg{font-size:13px;padding:10px 12px;border-radius:10px;margin-top:6px}
+.msg.err{background:rgba(248,113,113,.12);color:#fca5a5;border:1px solid rgba(248,113,113,.3)}
+.msg.ok{background:rgba(52,211,153,.12);color:#6ee7b7;border:1px solid rgba(52,211,153,.3)}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;position:relative}
+.kpi .v{font-size:26px;font-weight:800;line-height:1.1}
+.kpi .l{color:var(--txt-2);font-size:12.5px;margin-top:3px}
+.kpi .help{position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;border:1px solid var(--border);color:var(--txt-3);font-size:11px;display:grid;place-items:center;cursor:pointer;user-select:none}
+.kpi .help:hover{border-color:var(--brand);color:var(--brand)}
+.kpi.accent .v{color:var(--brand-2)}
+.kpi.good .v{color:var(--ok)} .kpi.warn .v{color:var(--warn)}
+
+/* tabs */
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin:6px 0 16px;overflow-x:auto}
+.tab{padding:10px 14px;color:var(--txt-2);font-weight:600;border-bottom:2px solid transparent;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none}
+.tab.active{color:#fff;border-bottom-color:var(--brand)}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 4px;font-size:16px}
+.card .sub{color:var(--txt-2);font-size:13px;margin:0 0 14px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar input[type=search]{flex:1;min-width:160px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-2);color:var(--txt)}
+.toolbar input:focus{outline:none;border-color:var(--brand)}
+
+.pub{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 6px;border-bottom:1px solid var(--border)}
+.pub:last-child{border-bottom:none}
+.pub .t{font-weight:600;font-size:14px}
+.pub .t small{display:block;color:var(--txt-3);font-weight:500;font-size:12px;margin-top:2px}
+.pub .metrics{display:flex;gap:8px;align-items:center}
+.chip{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--card-2);border:1px solid var(--border);color:var(--txt-2);white-space:nowrap}
+.chip.big{font-size:14px;padding:5px 12px;color:var(--brand-2);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+.chip.bad{color:#fca5a5;border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.08)}
+.chip.click{cursor:pointer}
+.chip.click:hover{border-color:var(--brand);color:#fff}
+.bar{height:7px;border-radius:6px;background:var(--card-2);overflow:hidden;margin-top:8px}
+.bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+.mini-int{font-size:11.5px;color:var(--txt-3);margin-top:6px}
+.tag-int{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;color:#0b0f19}
+
+.dist{display:flex;flex-direction:column;gap:10px}
+.dist .row{display:grid;grid-template-columns:130px 1fr 46px;gap:10px;align-items:center;font-size:13px}
+.dist .row .lbl{color:var(--txt-2)}
+.dist .row .track{height:12px;border-radius:6px;background:var(--card-2);overflow:hidden}
+.dist .row .track > i{display:block;height:100%}
+.dist .row .n{text-align:right;font-weight:700}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:50;padding:16px}
+.modal{width:100%;max-width:720px;max-height:88vh;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.modal .mh{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--border);padding:16px;display:flex;gap:10px;align-items:flex-start;z-index:2}
+.modal .mh .x{margin-left:auto;font-size:22px;line-height:1;color:var(--txt-3);background:none;border:none}
+.modal .mb{padding:16px}
+.q{padding:12px 0;border-bottom:1px dashed var(--border)}
+.q:last-child{border-bottom:none}
+.q .qt{font-weight:600}
+.q .qa{color:var(--txt-2);font-size:13.5px;margin-top:4px;padding-left:12px;border-left:2px solid var(--border)}
+.q .meta{font-size:11.5px;color:var(--txt-3);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap}
+/* cuadro de respuesta */
+.answer-box{margin-top:10px;background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:10px}
+.answer-box textarea{width:100%;min-height:64px;resize:vertical;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-size:14px}
+.answer-box textarea:focus{outline:none;border-color:var(--brand)}
+.answer-box .presets{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.answer-box .arow{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap}
+.answer-box .cnt{font-size:11.5px;color:var(--txt-3)}
+.answered{color:var(--ok);font-weight:700;font-size:13px;margin-top:8px}
+
+/* plantillas admin */
+.preset-item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--border)}
+.preset-item:last-child{border-bottom:none}
+.preset-item .pt{font-weight:700}
+.preset-item .px{color:var(--txt-2);font-size:13px;margin-top:3px;white-space:pre-wrap}
+.preset-item .pa{display:flex;gap:6px}
+
+.state{text-align:center;padding:40px 16px;color:var(--txt-2)}
+.spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--brand);margin:0 auto 14px;animation:sp 1s linear infinite}
+.spin.mini{width:16px;height:16px;border-width:2px;margin:0;display:inline-block;vertical-align:middle}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{border:1px dashed var(--border);border-radius:var(--radius);padding:30px;text-align:center;color:var(--txt-2)}
+
+.syncbox{position:fixed;inset:0;background:rgba(11,15,25,.8);display:grid;place-items:center;z-index:60;padding:16px}
+.syncbox .inner{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:26px 28px;max-width:360px;width:100%;text-align:center;box-shadow:var(--shadow)}
+.syncbox .inner .big{font-size:15px;font-weight:700;margin:4px 0 6px}
+.syncbox .inner .small{color:var(--txt-2);font-size:13px}
+.syncbox .inner .timer{font-variant-numeric:tabular-nums;color:var(--brand-2);font-weight:800;font-size:22px;margin-top:10px}
+.progtrack{height:8px;border-radius:6px;background:var(--card-2);overflow:hidden;margin:14px 0 6px}
+.progtrack > i{display:block;height:100%;width:30%;background:linear-gradient(90deg,var(--brand),var(--brand-2));animation:indet 1.3s ease-in-out infinite}
+@keyframes indet{0%{margin-left:-30%}100%{margin-left:100%}}
+
+#pop{position:fixed;z-index:80;max-width:280px;background:#0f1626;border:1px solid var(--brand);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--txt);box-shadow:var(--shadow)}
+#pop b{color:var(--brand-2)}
+
+.func h3{color:var(--brand-2);margin:18px 0 6px;font-size:14px}
+.func p,.func li{color:var(--txt-2);font-size:13.5px}
+.func ul{margin:6px 0;padding-left:20px}
+.footer{color:var(--txt-3);font-size:12px;text-align:center;padding:24px 0}
+@media(max-width:560px){
+  .kpi .v{font-size:22px}
+  .dist .row{grid-template-columns:96px 1fr 40px}
+  .pub{grid-template-columns:1fr}
+  .pub .metrics{justify-content:flex-start}
+  .preset-item{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginView" class="login">
+  <div class="box">
+    <div class="logo"><span class="mark">C</span><div>CORAZ Autopartes<small>Preguntas ML</small></div></div>
+    <h1>Ingresá</h1>
+    <p>Análisis, respuesta y plantillas para las preguntas de Mercado Libre.</p>
+    <form id="loginForm">
+      <div class="field"><label>Email</label><input type="email" id="email" autocomplete="username" required /></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="password" autocomplete="current-password" required /></div>
+      <button class="btn primary" style="width:100%" type="submit" id="loginBtn">Entrar</button>
+      <div id="loginMsg"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="appView" class="hidden">
+  <header class="top">
+    <div class="logo"><span class="mark">C</span><div>CORAZ<small>Preguntas ML</small></div></div>
+    <div class="sp"></div>
+    <button class="btn sm" id="syncBtn" title="Traer las preguntas nuevas de Mercado Libre">↻ Sincronizar</button>
+    <button class="btn sm ghost" id="logoutBtn">Salir</button>
+  </header>
+
+  <div class="wrap">
+    <div class="kpis" id="kpis"></div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="ranking">🔥 Ranking de fricción</button>
+      <button class="tab" data-tab="intenciones">📊 Tipos de pregunta</button>
+      <button class="tab" data-tab="plantillas">✍️ Plantillas</button>
+      <button class="tab" data-tab="func">ℹ️ Funcionamiento</button>
+    </div>
+
+    <!-- ranking -->
+    <section id="tab-ranking">
+      <div class="card">
+        <h2>Publicaciones que más preguntas generan</h2>
+        <p class="sub">Ordenadas por preguntas <b>accionables</b> (se descuentan saludos/agradecimientos). Tocá una fila para ver las preguntas y responder las que estén pendientes.</p>
+        <div class="toolbar"><input type="search" id="buscar" placeholder="Buscar publicación o SKU…" /></div>
+        <div id="rankingList"><div class="state"><div class="spin"></div>Cargando…</div></div>
+      </div>
+    </section>
+
+    <!-- intenciones -->
+    <section id="tab-intenciones" class="hidden">
+      <div class="card">
+        <h2>¿De qué preguntan?</h2>
+        <p class="sub">Clasificación automática por tipo. <b>Ojo:</b> hoy es una aproximación por palabras clave; con IA será exacta.</p>
+        <div class="dist" id="distList"></div>
+      </div>
+    </section>
+
+    <!-- plantillas -->
+    <section id="tab-plantillas" class="hidden">
+      <div class="card">
+        <h2>Plantillas de respuesta</h2>
+        <p class="sub">Respuestas preseteadas para insertar con un click cuando respondés. Se pueden editar antes de enviar. Acordate: sin teléfonos, mails ni links (ML lo penaliza).</p>
+        <div id="presetList"><div class="state"><div class="spin"></div>Cargando…</div></div>
+        <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
+          <h2 style="font-size:14px" id="presetFormTitle">Nueva plantilla</h2>
+          <div class="field"><label>Nombre</label><input type="text" id="presetTitulo" placeholder="Ej: Stock OK" /></div>
+          <div class="field"><label>Texto</label><textarea id="presetTexto" rows="3" placeholder="El texto que se va a insertar…"></textarea></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn primary sm" id="presetSave">Guardar plantilla</button>
+            <button class="btn ghost sm hidden" id="presetCancel">Cancelar edición</button>
+          </div>
+          <div id="presetMsg"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- funcionamiento -->
+    <section id="tab-func" class="hidden">
+      <div class="card func">
+        <h2>Funcionamiento de la app</h2>
+        <p class="sub">Qué hace, de dónde saca los datos y cómo usarla.</p>
+
+        <h3>¿Para qué sirve?</h3>
+        <p>Gestiona las preguntas de Mercado Libre de CORAZ en tres frentes: <b>detectar fricción</b> (qué publicaciones generan más preguntas), <b>responder</b> desde acá, y usar <b>plantillas</b> para contestar más rápido. Cada pregunta repetida es info que le falta a la ficha: si una bomba universal recibe 40 "¿le va a mi auto?", agregar compatibilidad a esa publicación mata esas preguntas.</p>
+
+        <h3>¿De dónde salen los datos?</h3>
+        <ul>
+          <li>Las preguntas se bajan de la <b>API de Mercado Libre</b> (cuenta CORAZ) → tabla <code>ml_preguntas</code> en Supabase.</li>
+          <li>Título y SKU se cruzan con <code>ml_sku_publicaciones</code>.</li>
+          <li>Todo pasa por Edge Functions seguras: la app nunca ve tokens de ML.</li>
+        </ul>
+
+        <h3>Las pestañas</h3>
+        <ul>
+          <li><b>Ranking de fricción:</b> publicaciones por preguntas accionables. Tocá una para ver sus preguntas y <b>responder</b> las pendientes.</li>
+          <li><b>Tipos de pregunta:</b> distribución global por tipo.</li>
+          <li><b>Plantillas:</b> creá/editá/borrá respuestas preseteadas. Aparecen como botones dentro del cuadro de respuesta.</li>
+        </ul>
+
+        <h3>Responder</h3>
+        <p>En el detalle de una publicación, cada pregunta sin responder tiene un cuadro. Escribís (o insertás una plantilla y editás) y tocás <b>Responder</b>: se envía directo a Mercado Libre y queda marcada como respondida. No hay paso de confirmación, así que revisá el texto antes de tocar el botón.</p>
+
+        <h3>Sincronizar</h3>
+        <p>Trae las preguntas nuevas de los últimos días. La carga histórica ya se hizo una vez.</p>
+
+        <h3>¿Qué viene después?</h3>
+        <p>La base queda lista para el <b>auto-respondedor con IA</b>: Claude podría sugerir el borrador de cada respuesta usando el catálogo. Hoy quedó en modo copiloto (vos respondés, con plantillas).</p>
+      </div>
+    </section>
+
+    <div class="footer">CORAZ Autopartes · Preguntas de Mercado Libre</div>
+  </div>
+</div>
+
+<div id="detalle" class="overlay hidden"></div>
+<div id="pop" class="hidden"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+/* ============================ CONFIG ============================ */
+const CONFIG = {
+  SUPABASE_URL: "https://kvewsxrfogosjwehookj.supabase.co",
+  ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2ZXdzeHJmb2dvc2p3ZWhvb2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3OTA2OTksImV4cCI6MjEwMTM2NjY5OX0.6oyDPFG_8hAAULXCUn6uO7C-abxMSOxxMFFJ_xBFZHY",
+  FN_LIST: "/functions/v1/preguntas-list",
+  FN_SYNC: "/functions/v1/preguntas-sync",
+  FN_RESPONDER: "/functions/v1/preguntas-responder",
+  FN_PRESETS: "/functions/v1/presets-crud",
+};
+const INT_COLORS = { compatibilidad:"#f59e0b", stock:"#38bdf8", envio:"#a78bfa", precio:"#34d399", specs:"#fb7185", garantia:"#f472b6", otras:"#94a3b8", saludo:"#475569" };
+const KPI_HELP = {
+  total:{t:"Preguntas totales",d:"Todas las preguntas del período, incluyendo saludos. Fuente: API de Mercado Libre."},
+  accionables:{t:"Preguntas accionables",d:"Total menos saludos/agradecimientos. Las preguntas reales que valdría evitar mejorando las fichas."},
+  saludos:{t:"Ruido (saludos)",d:"Mensajes tipo \"gracias\", \"ok\". No son fricción; se separan del análisis."},
+  publicaciones:{t:"Publicaciones con preguntas",d:"Publicaciones distintas que recibieron al menos una pregunta."},
+  sin_responder:{t:"Sin responder",d:"Preguntas UNANSWERED en ML a la última sincronización. Respondelas desde el detalle de cada publicación."},
+  horas:{t:"Tiempo prom. de respuesta",d:"Promedio de horas entre que entra la pregunta y la respondés (sobre las ya respondidas)."},
+};
+
+/* ============================ ESTADO ============================ */
+let sb = null, SESSION = null;
+let DATA = { resumen:null, intenciones:[], ranking:[] };
+let PRESETS = [];
+let filtro = "";
+let editandoPreset = null;   // id en edición o null
+let detalleDirty = false;    // si respondí algo, recargar al cerrar
+
+/* ============================ LÓGICA ============================ */
+const $ = (s,root=document)=>root.querySelector(s);
+const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
+const esc = (s)=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const escAttr = (s)=>esc(s).replace(/'/g,"&#39;");
+const fmtFecha = (iso)=>{ if(!iso) return "—"; try{ return new Date(iso).toLocaleDateString("es-AR",{day:"2-digit",month:"short",year:"2-digit"});}catch{return "—";} };
+function cdnOk(){ return typeof window.supabase !== "undefined" && window.supabase.createClient; }
+
+async function apiGet(path){
+  const ctrl = new AbortController(); const to = setTimeout(()=>ctrl.abort(), 20000);
+  try{
+    const res = await fetch(CONFIG.SUPABASE_URL+path, { headers:{ "apikey":CONFIG.ANON_KEY, "Authorization":"Bearer "+SESSION.access_token }, signal: ctrl.signal });
+    const json = await res.json().catch(()=>null);
+    if(!res.ok || !json || json.ok===false) throw new Error((json && json.error) ? json.error : ("HTTP "+res.status));
+    return json;
+  } finally { clearTimeout(to); }
+}
+async function apiSend(path, method, body){
+  const ctrl = new AbortController(); const to = setTimeout(()=>ctrl.abort(), 90000);
+  try{
+    const res = await fetch(CONFIG.SUPABASE_URL+path, {
+      method, headers:{ "apikey":CONFIG.ANON_KEY, "Authorization":"Bearer "+SESSION.access_token, "Content-Type":"application/json" },
+      body: body!==undefined ? JSON.stringify(body) : undefined, signal: ctrl.signal });
+    const json = await res.json().catch(()=>null);
+    if(!res.ok || !json || json.ok===false){
+      const extra = json && json.detalle ? (" — "+JSON.stringify(json.detalle).slice(0,180)) : "";
+      throw new Error(((json && json.error) ? json.error : ("HTTP "+res.status))+extra);
+    }
+    return json;
+  } finally { clearTimeout(to); }
+}
+
+/* auth */
+async function initAuth(){
+  if(!cdnOk()){ $("#loginMsg").innerHTML = '<div class="msg err">No se pudo cargar la librería de Supabase (CDN). Revisá tu conexión y recargá.</div>'; return; }
+  sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.ANON_KEY);
+  const { data } = await sb.auth.getSession();
+  if(data && data.session){ SESSION = data.session; enterApp(); }
+}
+async function doLogin(e){
+  e.preventDefault();
+  const btn = $("#loginBtn"), msg = $("#loginMsg");
+  msg.innerHTML=""; btn.disabled=true; btn.textContent="Entrando…";
+  try{
+    const { data, error } = await sb.auth.signInWithPassword({ email:$("#email").value.trim(), password:$("#password").value });
+    if(error) throw error;
+    SESSION = data.session; enterApp();
+  }catch(err){ msg.innerHTML = '<div class="msg err">'+esc(err.message||"No se pudo iniciar sesión")+'</div>'; }
+  finally{ btn.disabled=false; btn.textContent="Entrar"; }
+}
+async function doLogout(){ try{ await sb.auth.signOut(); }catch{} location.reload(); }
+function enterApp(){ $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden"); cargar(); cargarPresets(); }
+
+/* datos */
+async function cargar(){
+  $("#rankingList").innerHTML = '<div class="state"><div class="spin"></div>Cargando preguntas…</div>';
+  try{
+    const json = await apiGet(CONFIG.FN_LIST);
+    DATA.resumen = json.resumen; DATA.intenciones = json.intenciones||[]; DATA.ranking = json.ranking||[];
+    renderKpis(); renderRanking(); renderIntenciones();
+  }catch(err){
+    $("#rankingList").innerHTML = '<div class="empty">No se pudieron cargar los datos.<br><small>'+esc(err.message)+'</small><br><br><button class="btn sm" onclick="cargar()">Reintentar</button></div>';
+    renderKpis(true);
+  }
+}
+async function cargarPresets(){
+  try{ const json = await apiGet(CONFIG.FN_PRESETS); PRESETS = json.presets||[]; renderPresets(); }
+  catch(err){ $("#presetList").innerHTML = '<div class="empty">No se pudieron cargar las plantillas.<br><small>'+esc(err.message)+'</small></div>'; }
+}
+
+/* sincronizar (feedback de progreso) */
+async function sincronizar(){
+  const box = document.createElement("div"); box.className="syncbox";
+  box.innerHTML = '<div class="inner"><div class="spin"></div><div class="big">Sincronizando con Mercado Libre</div>'
+    +'<div class="small">Trayendo las preguntas nuevas…</div><div class="progtrack"><i></i></div><div class="timer" id="syncTimer">0.0s</div>'
+    +'<div class="small" style="margin-top:6px">Suele tardar unos segundos</div></div>';
+  document.body.appendChild(box);
+  const t0 = Date.now();
+  const iv = setInterval(()=>{ const el=$("#syncTimer"); if(el) el.textContent=((Date.now()-t0)/1000).toFixed(1)+"s"; }, 100);
+  try{
+    const r = await apiSend(CONFIG.FN_SYNC, "POST", { modo:"incremental", max_paginas:6 });
+    clearInterval(iv);
+    const secs = ((Date.now()-t0)/1000).toFixed(1);
+    box.querySelector(".inner").innerHTML = '<div style="font-size:32px">✅</div><div class="big">Listo</div>'
+      +'<div class="small">'+(r.preguntas_procesadas??0)+' preguntas revisadas en '+secs+'s.</div>'
+      +'<button class="btn primary sm" style="margin-top:14px" id="syncClose">Ver resultados</button>';
+    $("#syncClose").onclick = ()=>{ box.remove(); cargar(); };
+  }catch(err){
+    clearInterval(iv);
+    box.querySelector(".inner").innerHTML = '<div style="font-size:30px">⚠️</div><div class="big">No se pudo sincronizar</div>'
+      +'<div class="small">'+esc(err.message)+'</div><button class="btn sm" style="margin-top:14px" id="syncClose">Cerrar</button>';
+    $("#syncClose").onclick = ()=> box.remove();
+  }
+}
+
+/* ============================ RENDER ============================ */
+function kpiCard(key,val,cls){ const h = KPI_HELP[key];
+  return '<div class="kpi '+(cls||"")+'"><span class="help" data-help="'+key+'">?</span><div class="v">'+val+'</div><div class="l">'+(h?h.t:key)+'</div></div>'; }
+function renderKpis(err){
+  const r = DATA.resumen;
+  if(err || !r){ $("#kpis").innerHTML = kpiCard("total","—")+kpiCard("accionables","—")+kpiCard("publicaciones","—"); return; }
+  const horas = r.horas_prom_respuesta!=null ? r.horas_prom_respuesta+"h" : "—";
+  $("#kpis").innerHTML =
+    kpiCard("accionables", r.accionables, "accent")+ kpiCard("total", r.total)+ kpiCard("publicaciones", r.publicaciones)+
+    kpiCard("sin_responder", r.sin_responder, r.sin_responder>0?"warn":"good")+ kpiCard("horas", horas)+ kpiCard("saludos", r.saludos);
+}
+function tagIntencion(key,label){ const c = INT_COLORS[key]||"#94a3b8"; return '<span class="tag-int" style="background:'+c+'">'+esc(label||key)+'</span>'; }
+function renderRanking(){
+  const cont = $("#rankingList");
+  let list = DATA.ranking.slice();
+  if(filtro){ const f = filtro.toLowerCase(); list = list.filter(p => (p.titulo||"").toLowerCase().includes(f) || (p.seller_sku||"").toLowerCase().includes(f) || (p.item_id||"").toLowerCase().includes(f)); }
+  if(!list.length){ cont.innerHTML='<div class="empty">Sin resultados.</div>'; return; }
+  const max = Math.max(...list.map(p=>p.accionables||0), 1);
+  cont.innerHTML = list.map(p=>{
+    const pct = Math.round((p.accionables/max)*100);
+    const titulo = p.titulo || ("Publicación "+p.item_id);
+    const sku = p.seller_sku ? '<small>SKU '+esc(p.seller_sku)+' · '+esc(p.item_id)+'</small>' : '<small>'+esc(p.item_id)+'</small>';
+    const intTag = p.intencion_top ? tagIntencion(p.intencion_top, p.intencion_top_label)+' <span style="color:var(--txt-3)">'+p.pct_top+'%</span>' : '';
+    const sinResp = p.sin_resp>0 ? '<span class="chip bad">'+p.sin_resp+' sin resp.</span>' : '';
+    return '<div class="pub" onclick="verDetalle(\''+p.item_id+'\')" style="cursor:pointer">'
+      +'<div><div class="t">'+esc(titulo)+sku+'</div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="mini-int">'+intTag+'</div></div>'
+      +'<div class="metrics"><span class="chip big">'+p.accionables+'</span>'+sinResp+'</div></div>';
+  }).join("");
+}
+function renderIntenciones(){
+  const cont = $("#distList"); const list = DATA.intenciones.slice();
+  if(!list.length){ cont.innerHTML='<div class="empty">Sin datos.</div>'; return; }
+  const total = list.reduce((a,b)=>a+b.cantidad,0)||1;
+  cont.innerHTML = list.map(i=>{ const pct = Math.round((i.cantidad/total)*100); const c = INT_COLORS[i.key]||"#94a3b8";
+    return '<div class="row"><div class="lbl">'+esc(i.label)+'</div><div class="track"><i style="width:'+pct+'%;background:'+c+'"></i></div><div class="n">'+i.cantidad+'</div></div>'; }).join("");
+}
+
+/* plantillas admin */
+function renderPresets(){
+  const cont = $("#presetList");
+  if(!PRESETS.length){ cont.innerHTML='<div class="empty">Todavía no hay plantillas. Creá la primera abajo.</div>'; return; }
+  cont.innerHTML = PRESETS.map(p=>
+    '<div class="preset-item"><div><div class="pt">'+esc(p.titulo)+'</div><div class="px">'+esc(p.texto)+'</div></div>'
+    +'<div class="pa"><button class="btn sm ghost" onclick="editarPreset('+p.id+')">Editar</button>'
+    +'<button class="btn sm danger" onclick="borrarPreset('+p.id+')">Borrar</button></div></div>'
+  ).join("");
+}
+function editarPreset(id){
+  const p = PRESETS.find(x=>x.id===id); if(!p) return;
+  editandoPreset = id;
+  $("#presetTitulo").value = p.titulo; $("#presetTexto").value = p.texto;
+  $("#presetFormTitle").textContent = "Editar plantilla"; $("#presetCancel").classList.remove("hidden");
+  $("#presetTitulo").scrollIntoView({behavior:"smooth",block:"center"});
+}
+function cancelarEdicionPreset(){ editandoPreset=null; $("#presetTitulo").value=""; $("#presetTexto").value=""; $("#presetFormTitle").textContent="Nueva plantilla"; $("#presetCancel").classList.add("hidden"); $("#presetMsg").innerHTML=""; }
+async function guardarPreset(){
+  const titulo = $("#presetTitulo").value.trim(), texto = $("#presetTexto").value.trim(), msg = $("#presetMsg");
+  if(!titulo || !texto){ msg.innerHTML='<div class="msg err">Completá nombre y texto.</div>'; return; }
+  const btn = $("#presetSave"); btn.disabled=true; btn.textContent="Guardando…";
+  try{
+    const body = { titulo, texto }; if(editandoPreset) body.id = editandoPreset;
+    await apiSend(CONFIG.FN_PRESETS, "POST", body);
+    cancelarEdicionPreset(); await cargarPresets();
+    msg.innerHTML='<div class="msg ok">Plantilla guardada.</div>'; setTimeout(()=>{ if($("#presetMsg")) $("#presetMsg").innerHTML=""; }, 2500);
+  }catch(err){ msg.innerHTML='<div class="msg err">'+esc(err.message)+'</div>'; }
+  finally{ btn.disabled=false; btn.textContent="Guardar plantilla"; }
+}
+async function borrarPreset(id){
+  const p = PRESETS.find(x=>x.id===id);
+  if(!confirm('¿Borrar la plantilla "'+(p?p.titulo:"")+'"?')) return;
+  try{ await apiSend(CONFIG.FN_PRESETS + "?id="+id, "DELETE"); await cargarPresets(); }
+  catch(err){ alert("No se pudo borrar: "+err.message); }
+}
+
+/* detalle + responder */
+async function verDetalle(itemId){
+  detalleDirty = false;
+  const ov = $("#detalle"); ov.classList.remove("hidden");
+  ov.innerHTML = '<div class="modal"><div class="mb"><div class="state"><div class="spin"></div>Cargando preguntas…</div></div></div>';
+  try{
+    const json = await apiGet(CONFIG.FN_LIST + "?item_id="+encodeURIComponent(itemId));
+    const titulo = json.titulo || ("Publicación "+itemId);
+    const linkML = "https://articulo.mercadolibre.com.ar/"+itemId.replace(/^MLA/,"MLA-");
+    const porInt = (json.por_intencion||[]).map(i=>{ const c = INT_COLORS[i.key]||"#94a3b8"; return '<span class="chip" style="border-color:'+c+';color:'+c+'">'+esc(i.label)+': '+i.cantidad+'</span>'; }).join(" ");
+    const preguntas = (json.preguntas||[]).map(q=>renderPregunta(q)).join("");
+    ov.innerHTML = '<div class="modal"><div class="mh"><div><div style="font-weight:700">'+esc(titulo)+'</div>'
+      +'<div style="color:var(--txt-3);font-size:12px;margin-top:3px">'+ (json.seller_sku?("SKU "+esc(json.seller_sku)+" · "):"") + esc(itemId)+' · '+json.total+' preguntas · <a href="'+linkML+'" target="_blank" rel="noopener">ver en ML ↗</a></div>'
+      +'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+porInt+'</div></div>'
+      +'<button class="x" onclick="cerrarDetalle()">×</button></div>'
+      +'<div class="mb">'+(preguntas||'<div class="empty">Sin preguntas.</div>')+'</div></div>';
+  }catch(err){
+    ov.innerHTML = '<div class="modal"><div class="mh"><div style="font-weight:700">Error</div><button class="x" onclick="cerrarDetalle()">×</button></div><div class="mb"><div class="empty">'+esc(err.message)+'</div></div></div>';
+  }
+}
+function renderPregunta(q){
+  const meta = '<div class="meta"><span>'+fmtFecha(q.date_created)+'</span><span>'+esc(q.status)+'</span></div>';
+  if(q.status === "UNANSWERED"){
+    const chips = PRESETS.map(p=>'<span class="chip click" onclick="insertarPreset('+q.question_id+','+p.id+')">'+esc(p.titulo)+'</span>').join("");
+    return '<div class="q" id="q-'+q.question_id+'"><div class="qt">'+tagIntencion(q.intencion,q.intencion_label)+' '+esc(q.texto)+'</div>'
+      +'<div class="answer-box">'
+      +(chips?'<div class="presets">'+chips+'</div>':'')
+      +'<textarea id="resp-'+q.question_id+'" placeholder="Escribí la respuesta o insertá una plantilla…" oninput="contar('+q.question_id+')"></textarea>'
+      +'<div class="arow"><span class="cnt" id="cnt-'+q.question_id+'">0 / 2000</span>'
+      +'<button class="btn primary sm" id="btn-'+q.question_id+'" onclick="responderPregunta('+q.question_id+')">Responder</button></div>'
+      +'<div id="rmsg-'+q.question_id+'"></div></div>'+meta+'</div>';
+  }
+  const resp = q.respuesta ? '<div class="qa">'+esc(q.respuesta)+'</div>' : '<div class="qa" style="color:var(--bad)">Respondida (sin texto en caché)</div>';
+  return '<div class="q" id="q-'+q.question_id+'"><div class="qt">'+tagIntencion(q.intencion,q.intencion_label)+' '+esc(q.texto)+'</div>'+resp+meta+'</div>';
+}
+function insertarPreset(qid, presetId){
+  const p = PRESETS.find(x=>x.id===presetId); if(!p) return;
+  const ta = $("#resp-"+qid); if(!ta) return;
+  ta.value = p.texto; contar(qid); ta.focus();
+}
+function contar(qid){ const ta=$("#resp-"+qid), el=$("#cnt-"+qid); if(ta&&el){ el.textContent = ta.value.length+" / 2000"; el.style.color = ta.value.length>2000 ? "var(--bad)" : "var(--txt-3)"; } }
+async function responderPregunta(qid){
+  const ta = $("#resp-"+qid), btn = $("#btn-"+qid), msg = $("#rmsg-"+qid);
+  const text = (ta.value||"").trim();
+  if(!text){ msg.innerHTML='<div class="msg err">La respuesta está vacía.</div>'; return; }
+  if(text.length>2000){ msg.innerHTML='<div class="msg err">Supera los 2000 caracteres.</div>'; return; }
+  btn.disabled=true; btn.innerHTML='<span class="spin mini"></span> Enviando…'; msg.innerHTML="";
+  try{
+    await apiSend(CONFIG.FN_RESPONDER, "POST", { question_id: qid, text });
+    detalleDirty = true;
+    // Reemplaza el cuadro por el estado respondido, preservando el texto de la pregunta
+    const cont = $("#q-"+qid);
+    if(cont){
+      const qtEl = cont.querySelector(".qt");
+      const qtHtml = qtEl ? qtEl.outerHTML : "";
+      cont.innerHTML = qtHtml + '<div class="answered">✅ Respondida</div><div class="qa">'+esc(text)+'</div>';
+    }
+  }catch(err){
+    btn.disabled=false; btn.textContent="Responder";
+    msg.innerHTML='<div class="msg err">No se pudo enviar: '+esc(err.message)+'</div>';
+  }
+}
+function cerrarDetalle(){ $("#detalle").classList.add("hidden"); $("#detalle").innerHTML=""; if(detalleDirty){ detalleDirty=false; cargar(); } }
+
+/* popover ayuda */
+function showPop(target,key){ const h = KPI_HELP[key]; if(!h) return; const pop = $("#pop");
+  pop.innerHTML = '<b>'+esc(h.t)+'</b><br>'+esc(h.d); pop.classList.remove("hidden");
+  const r = target.getBoundingClientRect(); pop.style.top = (r.bottom+8)+"px"; pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth-300))+"px"; }
+function hidePop(){ $("#pop").classList.add("hidden"); }
+
+/* ============================ EVENTOS ============================ */
+$("#loginForm").addEventListener("submit", doLogin);
+$("#logoutBtn").addEventListener("click", doLogout);
+$("#syncBtn").addEventListener("click", sincronizar);
+$("#buscar").addEventListener("input", (e)=>{ filtro=e.target.value; renderRanking(); });
+$("#presetSave").addEventListener("click", guardarPreset);
+$("#presetCancel").addEventListener("click", cancelarEdicionPreset);
+$$(".tab").forEach(t=>t.addEventListener("click",()=>{
+  $$(".tab").forEach(x=>x.classList.remove("active")); t.classList.add("active");
+  const tab=t.dataset.tab;
+  $("#tab-ranking").classList.toggle("hidden",tab!=="ranking");
+  $("#tab-intenciones").classList.toggle("hidden",tab!=="intenciones");
+  $("#tab-plantillas").classList.toggle("hidden",tab!=="plantillas");
+  $("#tab-func").classList.toggle("hidden",tab!=="func");
+}));
+document.addEventListener("click",(e)=>{
+  const help = e.target.closest(".help");
+  if(help){ showPop(help, help.dataset.help); e.stopPropagation(); return; }
+  if(!e.target.closest("#pop")) hidePop();
+  if(e.target.id==="detalle") cerrarDetalle();
+});
+document.addEventListener("keydown",(e)=>{ if(e.key==="Escape"){ cerrarDetalle(); hidePop(); }});
+
+/* ============================ INIT ============================ */
+initAuth();
+</script>
+</body>
+</html>
